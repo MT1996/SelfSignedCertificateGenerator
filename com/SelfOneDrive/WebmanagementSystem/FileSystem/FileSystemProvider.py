@@ -1,0 +1,1 @@
+# Verifizierung der Zertifikate... openssl verify -CAfile rootcrt.pem servercrt.pem
