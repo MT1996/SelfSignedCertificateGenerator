@@ -1,5 +1,6 @@
 import datetime
 from typing import List, Tuple
+from datetime import datetime
 
 from builtins import classmethod
 from cryptography import x509
@@ -8,6 +9,8 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.base import Certificate, CertificateSigningRequest, CertificateBuilder
 from cryptography.x509.extensions import ExtensionType
 from cryptography.x509.name import NameAttribute
+from cryptography.x509.oid import NameOID
+from ..Config.Config import Config
 
 
 class SelfSignedCertificateGenerator:
@@ -17,31 +20,32 @@ class SelfSignedCertificateGenerator:
 
     @classmethod
     def generate_Certificate_Authority(cls,
-       privateKey: rsa.RSAPrivateKey,
        ca_information: List[x509.NameAttribute],
-       not_valid_before: datetime.datetime,
-       not_valid_after: datetime.datetime,
-       serial_number: int,
+       not_valid_after: datetime,
        extension: ExtensionType
-    ) -> Tuple[Certificate, rsa.RSAPrivateKey]:
-        publicKey = privateKey.public_key()
-        certificate = CertificateBuilder().subject_name(
+    ) -> Tuple[rsa.RSAPrivateKey, Certificate]:
+        privateKey = cls.generate_PrivateKey(
+            Config.publicKeyExponent,
+            Config.keySize
+        )
+        publicKey = cls.get_PublicKey_from_PrivateKey(privateKey)
+        certificate: Certificate = CertificateBuilder().subject_name(
             x509.Name(ca_information)
         ).issuer_name(
             x509.Name(ca_information)
         ).not_valid_before(
-            not_valid_before
+            datetime.utcnow()
         ).not_valid_after(
             not_valid_after
         ).serial_number(
-            serial_number
+            x509.random_serial_number()
         ).public_key(
             publicKey
         ).add_extension(
             extension
         ).sign(privateKey, hashes.SHA256())
 
-        return ()
+        return (privateKey, certificate)
 
     @classmethod
     def generate_PrivateKey(cls, public_exponent: int, key_size: int) -> rsa.RSAPrivateKey:
@@ -61,13 +65,42 @@ class SelfSignedCertificateGenerator:
         csr_information: List[NameAttribute],
         additional_extensions: List[ExtensionType]
     ) -> CertificateSigningRequest:
-        pass
+        return x509.CertificateSigningRequestBuilder().subject_name(
+            x509.Name(
+                csr_information
+            )
+        ).add_extension(
+            additional_extensions,
+            False
+        ).sign(privateKey, hashes.SHA256())
 
     @classmethod
     def generate_SelfSignedServerCertificate(
         cls,
         csr: CertificateSigningRequest, 
         rootCACrt: Certificate, 
-        rootCAKey: rsa.RSAPrivateKey
+        rootCAKey: rsa.RSAPrivateKey,
+        number_days_cert_valid: int,
+        extension: ExtensionType
     ) -> Certificate:
-        pass
+        subject = csr.subject
+        issuer = rootCACrt.subject
+        publicKeyOfCrt = csr.public_key()
+        signingPrivateKey = rootCAKey
+
+        return CertificateBuilder().subject_name(
+            subject
+        ).issuer_name(
+            issuer
+        ).public_key(
+            publicKeyOfCrt
+        ).serial_number(
+            x509.random_serial_number()
+        ).not_valid_before(
+            datetime.datetime.utcnow()
+        ).not_valid_after(
+            datetime.datetime.utcnow() + datetime.timedelta(days=number_days_cert_valid)
+        ).add_extension(
+            extension,
+            False
+        ).sign(signingPrivateKey, hashes.SHA256())
