@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class CertData():
+    persistence_identifier: str
     country_name: str
     state_or_province_name: str
     local_city_name: str

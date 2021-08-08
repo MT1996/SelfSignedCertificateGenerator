@@ -42,10 +42,11 @@ class SelfSignedCertificateGenerator:
         ).public_key(
             publicKey
         ).add_extension(
-            extension
+            extension,
+            True
         ).sign(privateKey, hashes.SHA256())
 
-        return (privateKey, certificate)
+        return privateKey, certificate
 
     @classmethod
     def generate_PrivateKey(cls, public_exponent: int, key_size: int) -> rsa.RSAPrivateKey:
