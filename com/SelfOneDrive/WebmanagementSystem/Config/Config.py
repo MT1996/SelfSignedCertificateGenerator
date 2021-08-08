@@ -6,3 +6,4 @@ class Config():
     keyDefaultFiletype: str = os.environ.get("KEY_DEFAULT_FILETYPE")
     csrDefaultFiletype: str = os.environ.get("CSR_DEFAULT_FILETYPE")
     certDefaultFiletype: str = os.environ.get("CERT_DEFAULT_FILETYPE")
+    certDefaultCANamespace: str = os.environ.get("CERT_DEFAULT_CA_NAMESPACE")

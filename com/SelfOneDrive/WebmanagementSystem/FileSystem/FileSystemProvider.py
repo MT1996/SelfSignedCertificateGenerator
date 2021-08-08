@@ -29,11 +29,12 @@ class FileSystemProvider():
 
     @classmethod
     def createNamespaceForDomainForSavingKeysAndCertificate(cls, persistence_identifier: str) -> bool:
+        domainNamespace = cls.cert_installation_path.joinpath(persistence_identifier)
         if not cls.checkDomainExists(persistence_identifier):
-            cls.cert_installation_path.joinpath(persistence_identifier).mkdir(mode=0o644)
+            domainNamespace.mkdir(mode=0o777)
             return True
         else:
-            return False
+            return domainNamespace.exists()
 
     @classmethod
     def checkKeyExists(cls, persistence_identifier: str) -> bool:
@@ -42,18 +43,21 @@ class FileSystemProvider():
 
     @classmethod
     def createKeyEntry(cls, persistence_identifier: str, key: rsa.RSAPrivateKey) -> bool:
-        if not cls.checkKeyExists(persistence_identifier):
-            keyFilename = persistence_identifier + Config.keyDefaultFiletype
-            keyFile = cls.cert_installation_path.joinpath(persistence_identifier, keyFilename)
-            keyFile.touch()
-            keyFile.write_bytes(key.private_bytes(
-                serialization.Encoding.PEM,
-                serialization.PrivateFormat.TraditionalOpenSSL,
-                serialization.NoEncryption()
-            ))
-            return True
-        else:
+        if not cls.createNamespaceForDomainForSavingKeysAndCertificate(persistence_identifier):
             return False
+        else:
+            if not cls.checkKeyExists(persistence_identifier):
+                keyFilename = persistence_identifier + Config.keyDefaultFiletype
+                keyFile = cls.cert_installation_path.joinpath(persistence_identifier, keyFilename)
+                keyFile.touch()
+                keyFile.write_bytes(key.private_bytes(
+                    serialization.Encoding.PEM,
+                    serialization.PrivateFormat.TraditionalOpenSSL,
+                    serialization.NoEncryption()
+                ))
+                return True
+            else:
+                return False
 
     @classmethod
     def checkCertExists(cls, persistence_identifier: str) -> bool:
@@ -62,16 +66,19 @@ class FileSystemProvider():
 
     @classmethod
     def createCertEntry(cls, persistence_identifier: str, cert: Certificate) -> bool:
-        if not cls.checkCertExists(persistence_identifier):
-            certFilename = persistence_identifier + Config.certDefaultFiletype
-            certFile = cls.cert_installation_path.joinpath(persistence_identifier, certFilename)
-            certFile.touch()
-            certFile.write_bytes(cert.public_bytes(
-                serialization.Encoding.PEM
-            ))
-            return True
-        else:
+        if not cls.createNamespaceForDomainForSavingKeysAndCertificate(persistence_identifier):
             return False
+        else:
+            if not cls.checkCertExists(persistence_identifier):
+                certFilename = persistence_identifier + Config.certDefaultFiletype
+                certFile = cls.cert_installation_path.joinpath(persistence_identifier, certFilename)
+                certFile.touch()
+                certFile.write_bytes(cert.public_bytes(
+                    serialization.Encoding.PEM
+                ))
+                return True
+            else:
+                return False
 
     @classmethod
     def checkCSRExists(cls, persistence_identifier: str):
